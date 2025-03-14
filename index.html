@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Railway Ticket Status</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 60%;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px 0px gray;
+            margin-top: 30px;
+        }
+        input, select, button {
+            display: block;
+            width: 80%;
+            margin: 10px auto;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid gray;
+        }
+        button {
+            background-color: blue;
+            color: white;
+            cursor: pointer;
+            border: none;
+            padding: 10px;
+            width: 100px;
+            border-radius: 5px;
+        }
+        button.edit {
+            background-color: green;
+        }
+        button.delete {
+            background-color: red;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #007BFF;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .actions button {
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🚆 Railway Ticket Status</h2>
+        
+        <input type="text" id="passengerName" placeholder="Passenger Name">
+        <input type="number" id="age" placeholder="Age">
+        <input type="text" id="trainNumber" placeholder="Train Number">
+        <select id="status">
+            <option value="Confirmed">Confirmed</option>
+            <option value="Waiting">Waiting</option>
+            <option value="Canceled">Canceled</option>
+        </select>
+        <button onclick="addOrUpdateBooking()">Submit</button>
+
+        <h3>All Bookings</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Passenger Name</th>
+                    <th>Age</th>
+                    <th>Train Number</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="bookingsTable"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:5000/bookings";
+        let editingId = null;
+
+        async function fetchBookings() {
+            const response = await fetch(API_URL);
+            const bookings = await response.json();
+            const table = document.getElementById("bookingsTable");
+            table.innerHTML = "";
+            
+            bookings.forEach((booking) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${booking.passengerName}</td>
+                    <td>${booking.age}</td>
+                    <td>${booking.trainNumber}</td>
+                    <td><strong>${booking.status}</strong></td>
+                    <td class="actions">
+                        <button class="edit" onclick="editBooking('${booking._id}', '${booking.passengerName}', ${booking.age}, '${booking.trainNumber}', '${booking.status}')">Edit</button>
+                        <button class="delete" onclick="deleteBooking('${booking._id}')">Delete</button>
+                    </td>
+                `;
+                table.appendChild(row);
+            });
+        }
+
+        async function addOrUpdateBooking() {
+            const passengerName = document.getElementById("passengerName").value;
+            const age = document.getElementById("age").value;
+            const trainNumber = document.getElementById("trainNumber").value;
+            const status = document.getElementById("status").value;
+            
+            if (!passengerName || !age || !trainNumber) {
+                alert("Please fill all fields!");
+                return;
+            }
+
+            const booking = { passengerName, age, trainNumber, status };
+            
+            if (editingId) {
+                await fetch(`${API_URL}/${editingId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(booking),
+                });
+                editingId = null;
+            } else {
+                await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(booking),
+                });
+            }
+
+            document.getElementById("passengerName").value = "";
+            document.getElementById("age").value = "";
+            document.getElementById("trainNumber").value = "";
+            fetchBookings();
+        }
+
+        function editBooking(id, name, age, train, status) {
+            document.getElementById("passengerName").value = name;
+            document.getElementById("age").value = age;
+            document.getElementById("trainNumber").value = train;
+            document.getElementById("status").value = status;
+            editingId = id;
+        }
+
+        async function deleteBooking(id) {
+            await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+            fetchBookings();
+        }
+
+        fetchBookings();
+    </script>
+</body>
+</html>
